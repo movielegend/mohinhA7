@@ -4,7 +4,7 @@ import numpy as np
 import moderngl,trimesh
 from PIL import Image
 ROOT=Path(__file__).resolve().parent/'b11-model'
-ctx=moderngl.create_standalone_context(backend='egl');ctx.enable(moderngl.DEPTH_TEST)
+ctx=moderngl.create_standalone_context();ctx.enable(moderngl.DEPTH_TEST)
 def norm(v):v=np.array(v,dtype=float);return v/np.linalg.norm(v)
 def view(eye,target,up=(0,1,0)):
  f=norm(np.array(target)-eye);s=norm(np.cross(f,up));u=np.cross(s,f);m=np.eye(4);m[0,:3]=s;m[1,:3]=u;m[2,:3]=-f;m[:3,3]=-m[:3,:3]@eye;return m

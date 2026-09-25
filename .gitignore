@@ -41,3 +41,5 @@ wheels/
 .idea/
 *.swp
 *.swo
+
+source/b11-model/

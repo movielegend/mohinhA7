@@ -23,11 +23,13 @@ def add(name,obj,material,colors=None):
  else:m=obj.copy()
  assert len(m.faces),name
  m.fix_normals();m=trimesh.graph.smooth_shade(m,angle=np.deg2rad(38))
- m.visual=trimesh.visual.TextureVisuals(material=material)
+ if hasattr(obj,'visual') and getattr(obj.visual,'uv',None) is not None:
+  m.visual=obj.visual;m.visual.material=material
+ else:
+  m.visual=trimesh.visual.TextureVisuals(material=material)
  if colors is not None:
   rgb=colors(m.vertices);m.visual=trimesh.visual.ColorVisuals(m,vertex_colors=np.c_[np.clip(rgb,0,255),np.full(len(rgb),255)].astype('uint8'));m.visual.material=material
- # Recess the whole optical assembly, including its cream housing.
- if name.startswith('LENS /'): m.vertices[:,2]=118.0+(m.vertices[:,2]-118.0)*.17
+ # Recess is modelled directly in geometry coordinates.
  m.vertices/=1000;scene.add_geometry(m,node_name=name,geom_name=name);items.append((name,m,np.eye(4)))
  return m
 
@@ -62,26 +64,28 @@ for q in np.arange(-155,158,2.8):
 clip=prism(240,68,2,2,pos=(0,166,119.05))-cut
 add('FRONT / individually modelled diagonal ribs',mf.Manifold.compose(ribs)^clip,FACE)
 print('B11: optical assembly',flush=True)
-barrel=lathe([(28.2,118.1),(29,120),(28.7,124),(26.8,131),(24.4,134),(22.3,134),(21.6,130),(22,121)],22,166)
-add('LENS / low profile champagne bezel',barrel,TRIM)
-ring('LENS / pale outer rolled rim',24.7,23.4,134.2,material=FACE)
-ring('LENS / black retaining ring',23.4,20.5,134.8,material=DARK)
-ring('LENS / inner optical seat',20.8,19.7,132.1,material=METAL)
+barrel_profile = [(28.3, 118.8), (28.0, 118.4), (26.4, 117.2), (24.6, 116.0), (23.2, 115.2), (22.2, 114.8), (21.5, 114.5), (21.8, 114.0)]
+barrel = lathe(barrel_profile, 22, 166)
+add('LENS / low profile champagne bezel', barrel, TRIM)
+ring('LENS / pale outer rolled rim', 22.8, 21.6, 115.0, material=FACE)
+ring('LENS / black retaining ring', 21.6, 20.0, 114.8, material=DARK)
+ring('LENS / inner optical seat', 20.0, 19.2, 114.5, material=METAL)
 lens_tex_path = ROOT / 'lens_texture.png'
 lens_img = Image.open(lens_tex_path).convert('RGB') if lens_tex_path.exists() else None
-glass_mesh = dome(22, 166, 20.1, 132.3, 0.35)
+glass_mesh = dome(22, 166, 19.2, 114.4, 0.35)
 if lens_img is not None:
     w_t, h_t = lens_img.size
-    dx = (glass_mesh.vertices[:, 0] - 22.0) / 20.1
-    dy = (glass_mesh.vertices[:, 1] - 166.0) / 20.1
+    dx = (glass_mesh.vertices[:, 0] - 22.0) / 19.2
+    dy = (glass_mesh.vertices[:, 1] - 166.0) / 19.2
     u = np.clip(0.5 + 0.5 * dx, 0, 1)
     v = np.clip(0.5 + 0.5 * dy, 0, 1)
     arr_t = np.array(lens_img)
     px = np.clip(np.round(u * (w_t - 1)), 0, w_t - 1).astype(int)
     py = np.clip(np.round((1.0 - v) * (h_t - 1)), 0, h_t - 1).astype(int)
+    rgb = arr_t[py, px]
     lens_mat = trimesh.visual.material.PBRMaterial(name='Blue violet optical glass', baseColorFactor=[255, 255, 255, 255], metallicFactor=0.25, roughnessFactor=0.08, baseColorTexture=lens_img)
     glass_mesh.visual = trimesh.visual.TextureVisuals(uv=np.c_[u, v], image=lens_img, material=lens_mat)
-    add('LENS / recessed shallow optical glass', glass_mesh, lens_mat)
+    add('LENS / recessed shallow optical glass', glass_mesh, lens_mat, lambda _: rgb)
 else:
     add('LENS / recessed shallow optical glass', glass_mesh, GLASS)
 sensor_window=rounded_prism(23,14,6.8,.65,.18).translate((-87,163,118.25))-disc(3.45,3,(-84,163,118.4))
