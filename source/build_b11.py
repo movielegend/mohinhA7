@@ -67,16 +67,23 @@ add('LENS / low profile champagne bezel',barrel,TRIM)
 ring('LENS / pale outer rolled rim',24.7,23.4,134.2,material=FACE)
 ring('LENS / black retaining ring',23.4,20.5,134.8,material=DARK)
 ring('LENS / inner optical seat',20.8,19.7,132.1,material=METAL)
-def glass_color(v):
- x=(v[:,0]-22)/20.1;y=(v[:,1]-166)/20.1;r=np.sqrt(x*x+y*y);a=np.arctan2(y,x)
- c=np.tile([20.,27.,42.],(len(v),1));blue=np.exp(-((r-.74)/.19)**2);c+=blue[:,None]*[30,46,90]
- purple=np.exp(-((r-.40)/.08)**2);c+=purple[:,None]*[68,32,70]
- c+=(np.exp(-((r-.16)/.045)**2))[:,None]*[86,97,77]
- h=np.exp(-(((x+.39)/.24)**2+((y-.42)/.46)**2)**2*1.5)
- c=c*(1-h[:,None]*.7)+h[:,None]*[225,228,213]
- h2=np.exp(-(((x+.06)/.15)**2+((y-.65)/.20)**2)*2);c+=h2[:,None]*[55,80,55]
- return c
-add('LENS / recessed shallow optical glass',dome(22,166,20.1,132.3,.35),GLASS,glass_color)
+lens_tex_path = ROOT / 'lens_texture.png'
+lens_img = Image.open(lens_tex_path).convert('RGB') if lens_tex_path.exists() else None
+glass_mesh = dome(22, 166, 20.1, 132.3, 0.35)
+if lens_img is not None:
+    w_t, h_t = lens_img.size
+    dx = (glass_mesh.vertices[:, 0] - 22.0) / 20.1
+    dy = (glass_mesh.vertices[:, 1] - 166.0) / 20.1
+    u = np.clip(0.5 + 0.5 * dx, 0, 1)
+    v = np.clip(0.5 + 0.5 * dy, 0, 1)
+    arr_t = np.array(lens_img)
+    px = np.clip(np.round(u * (w_t - 1)), 0, w_t - 1).astype(int)
+    py = np.clip(np.round((1.0 - v) * (h_t - 1)), 0, h_t - 1).astype(int)
+    lens_mat = trimesh.visual.material.PBRMaterial(name='Blue violet optical glass', baseColorFactor=[255, 255, 255, 255], metallicFactor=0.25, roughnessFactor=0.08, baseColorTexture=lens_img)
+    glass_mesh.visual = trimesh.visual.TextureVisuals(uv=np.c_[u, v], image=lens_img, material=lens_mat)
+    add('LENS / recessed shallow optical glass', glass_mesh, lens_mat)
+else:
+    add('LENS / recessed shallow optical glass', glass_mesh, GLASS)
 sensor_window=rounded_prism(23,14,6.8,.65,.18).translate((-87,163,118.25))-disc(3.45,3,(-84,163,118.4))
 add('SENSOR / flush pill shaped window',sensor_window,DARK)
 add('SENSOR / inset miniature camera ring',disc(3.43,.25,(-84,163,118.3),inner=3.0),mat('Sensor dark rim',[67,76,73,255],.2,.42))
