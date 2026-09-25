@@ -1,0 +1,3 @@
+@echo off
+echo Dang mo giao dien xem mo hinh 3D A7 ULTRA...
+start "" "A7 ULTRA.html"
